@@ -1,0 +1,158 @@
+# ======================================================================
+# VALIDATION SCOPE AND INCREMENTAL STRATEGY
+# `validation_scope` is the window a profile is allowed to read.
+# `incremental_strategy` is how that window is resolved per table, and the
+# single generic authority for incremental operation policy (append-only /
+# versioned-history behavior, INSERT/UPDATE/DELETE/REPLAY/UNCHANGED/UNKNOWN
+# outcomes, CDC handling, bootstrap and checkpoint behavior).
+# Table YAML carries table metadata only (keys, watermark columns and
+# bounds, CDC column/values). Target audit configuration lives only here.
+# The strategy priority order is cdc -> watermark -> target_audit ->
+# primary_key -> full_hash; a table is only ever given a strategy whose
+# configured metadata it actually satisfies.
+# ======================================================================
+
+validations:
+  validation_scope:
+    mode: full
+    on_unresolved: error
+    watermark_sources:
+    - table_yaml
+    - runtime_metadata
+    - checkpoint
+    require_both_bounds: false
+    status_on_warning: WARNING
+    status_on_error: CONFIG_ERROR
+    status_on_skip: SKIP
+  incremental_strategy:
+    enabled: true
+    strategy:
+      mode: auto
+      priority:
+      - cdc
+      - watermark
+      - target_audit
+      - primary_key
+      - full_hash
+    # ------------------------------------------------------------------
+    # What the target is expected to do with a changed logical record.
+    #   append_only       existing logical records neither change nor
+    #                     disappear; only new records are appended.
+    #   versioned_history an old version may remain while a new version
+    #                     is appended; the latest version is current.
+    # The final PASS/FAIL of every operation still comes from
+    # operation_policy below, never from this mode alone.
+    # ------------------------------------------------------------------
+    target_behavior:
+      mode: versioned_history
+    # ------------------------------------------------------------------
+    # Final status per classified operation: pass | fail | warning.
+    # Operation classification, the source/target data comparison and this
+    # policy are three separate steps; a record whose source and current
+    # target values match can still FAIL here (e.g. UPDATE under
+    # append-only), and a record whose operation is allowed can still FAIL
+    # on a value mismatch.
+    # ------------------------------------------------------------------
+    operation_policy:
+      insert: pass
+      update: PASS
+      delete: fail
+      replay: fail
+      unchanged: pass
+      unknown: fail
+    classification:
+      enabled: true
+      preserve_operation_and_status_separately: true
+      # Look the current-load records up in the historical target scope to
+      # tell INSERT from UPDATE / REPLAY. Disabling it classifies every
+      # current record as UNKNOWN.
+      historical_check: true
+      # A completed lookup over retained target history proves that a
+      # source-matched current identity is new when no older identity exists.
+      # This never applies to a target-only row whose source record is absent.
+      historical_absence_proves_insert: true
+    # ------------------------------------------------------------------
+    # Change data capture. A table opts in with `incremental.cdc` metadata
+    # (operation column and the configured operation values); nothing is
+    # ever inferred from column names. delete_behavior states what a CDC
+    # DELETE must look like in the target: hard_delete (no current-load
+    # row for the key) or soft_delete (a current-load row whose
+    # soft_delete_column holds one of soft_delete_values). Any other
+    # value is reported as an unsupported configuration, never guessed.
+    # ------------------------------------------------------------------
+    cdc:
+      delete_behavior: hard_delete
+      soft_delete_column: null
+      soft_delete_values: []
+    # ------------------------------------------------------------------
+    # Current target load window, for tables without a watermark. The
+    # Configure the real target-only column here before enabling. Runtime
+    # metadata provides previous_load_boundary/current_load_boundary.
+    # Add audit_values to resolution_sources ONLY when distinct audit values
+    # identify batches, and explicitly enable batch_window_resolution below.
+    # ------------------------------------------------------------------
+    target_audit:
+      enabled: true
+      load_timestamp_column: _EtlLoadDateTime
+      # Required for distinct-value boundary discovery: every ETL batch must
+      # assign one shared audit value to all rows in that batch.
+      semantics: batch_value
+      resolution_sources:
+      - runtime_metadata
+      - checkpoint
+      batch_window_resolution:
+        enabled: true
+        strategy: latest_two_distinct_values
+    # ------------------------------------------------------------------
+    # First execution without a committed checkpoint.
+    #   require_previous_bound / require_checkpoint: the lower bound must be
+    #     configured (table_yaml / runtime_metadata); otherwise the
+    #     configured unresolved action applies.
+    #   open_lower_bound: the first run validates everything up to the
+    #     configured current bound (reported as bootstrap_used=true).
+    # ------------------------------------------------------------------
+    bootstrap:
+      watermark: require_previous_bound
+      primary_key: require_checkpoint
+      target_audit: require_previous_bound
+      cdc: require_checkpoint
+    reporting:
+      capture_mismatch_evidence: true
+    watermark:
+      enabled: true
+      mode: hybrid
+      previous_watermark: null
+      current_watermark: null
+      resolution_sources:
+      - table_yaml
+      - runtime_metadata
+      - checkpoint
+      on_unresolved: error
+      filter:
+        lower_operator: '>'
+        upper_operator: <=
+        parameterized: true
+    primary_key:
+      enabled: true
+      require_incremental_compatible_key: true
+      require_monotonic_key: true
+      checkpoint_enabled: true
+      unsuitable_key_action: full_hash
+    fallback:
+      no_watermark_no_pk: full_hash
+      full_hash:
+        enabled: true
+        use_existing_hash_comparison: true
+        # A snapshot fallback keeps the table's valid key mappings (the keyed
+        # comparison the table configured); only a table without keys uses the
+        # keyless row-hash comparison. Set false to force keyless processing.
+        preserve_key_mappings: true
+    safety:
+      allow_implicit_full_table_fallback: false
+      allow_explicit_full_hash_strategy: true
+      unresolved_watermark_action: error
+      missing_incremental_configuration_action: error
+    precedence:
+    - table_yaml
+    - common_validation_config
+    - framework_default

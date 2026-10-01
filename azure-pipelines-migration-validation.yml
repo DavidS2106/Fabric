@@ -1,0 +1,177 @@
+# ============================================================
+# azure-pipelines-migration-validation.yml
+# ============================================================
+# Azure DevOps pipeline for automated migration validation.
+#
+# Triggers:
+#   - On PR to main (critical tables only, fast gate < 5 min)
+#   - Nightly scheduled full run (all tables)
+#   - Manual dispatch with phase/layer/tag filters
+# ============================================================
+
+trigger:
+  branches:
+    include: [main, develop]
+  paths:
+    include:
+      - config/execution.yml
+      - config/tables/**/*.yml
+      - config/tables/**/*.yaml
+
+schedules:
+  - cron: "0 2 * * *"         # 2 AM UTC nightly
+    displayName: Nightly Full Validation
+    branches:
+      include: [main]
+    always: true
+
+parameters:
+  - name: filterTags
+    type: string
+    default: ""
+    displayName: "Filter by tags (comma-separated, blank = all)"
+  - name: filterLayers
+    type: string
+    default: ""
+    displayName: "Filter by layers: bronze,silver,gold (blank = all)"
+  - name: filterPhases
+    type: string
+    default: ""
+    displayName: "Filter by phases (blank = all)"
+  - name: failFast
+    type: boolean
+    default: true
+    displayName: "Fail pipeline on any validation failure"
+
+variables:
+  pythonVersion: "3.10"
+  configPath: "config/execution.yml"
+
+stages:
+
+# ── Stage 1: PR Gate (fast, critical only) ───────────────────
+- stage: PRGate
+  displayName: "PR Gate — Critical Tables"
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  jobs:
+    - job: ValidateCritical
+      displayName: "Validate critical-tagged tables"
+      pool:
+        vmImage: ubuntu-latest
+      timeoutInMinutes: 15
+      steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: $(pythonVersion)
+          displayName: Set Python version
+
+        - script: |
+            pip install -r requirements.txt
+          displayName: Install dependencies
+
+        - script: |
+            python run_validation.py \
+              --config $(configPath) \
+              --tags critical \
+              --phases full_load \
+              --workers 4 \
+              --fail-fast \
+              --output-dir $(Build.ArtifactStagingDirectory)/reports/pr
+          displayName: Run critical table validation
+          env:
+            SQL_SERVER: $(SQL_SERVER)
+            SQL_DATABASE: $(SQL_DATABASE)
+            SQL_USERNAME: $(SQL_USERNAME)
+            SQL_PASSWORD: $(SQL_PASSWORD)
+            SQL_TRUSTED_CONNECTION: $(SQL_TRUSTED_CONNECTION)
+            SQL_DRIVER: $(SQL_DRIVER)
+            FABRIC_WORKSPACE: $(FABRIC_WORKSPACE)
+            FABRIC_LAKEHOUSE: $(FABRIC_LAKEHOUSE)
+            FABRIC_SERVER: $(FABRIC_SERVER)
+            FABRIC_SQL_ENDPOINT: $(FABRIC_SQL_ENDPOINT)
+            FABRIC_DATABASE: $(FABRIC_DATABASE)
+            FABRIC_AUTHENTICATION: $(FABRIC_AUTHENTICATION)
+            FABRIC_DRIVER: $(FABRIC_DRIVER)
+            FABRIC_USERNAME: $(FABRIC_USERNAME)
+            FABRIC_PASSWORD: $(FABRIC_PASSWORD)
+
+        - task: PublishPipelineArtifact@1
+          condition: always()
+          inputs:
+            targetPath: $(Build.ArtifactStagingDirectory)/reports/pr
+            artifact: pr-validation-reports
+          displayName: Publish PR validation reports
+
+
+# ── Stage 2: Nightly Full Run ─────────────────────────────────
+- stage: NightlyFull
+  displayName: "Nightly — Full Validation (all tables)"
+  condition: or(eq(variables['Build.Reason'], 'Schedule'),
+                eq(variables['Build.Reason'], 'Manual'))
+  jobs:
+    - job: ValidateAll
+      displayName: "Validate all tables"
+      pool:
+        vmImage: ubuntu-latest
+      timeoutInMinutes: 120
+      steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: $(pythonVersion)
+          displayName: Set Python version
+
+        - script: |
+            pip install -r requirements.txt
+          displayName: Install dependencies
+
+        - script: |
+            # Build filter args dynamically from pipeline parameters
+            TAG_ARG=""
+            if [ -n "${{ parameters.filterTags }}" ]; then
+              TAG_ARG="--tags $(echo '${{ parameters.filterTags }}' | tr ',' ' ')"
+            fi
+            LAYER_ARG=""
+            if [ -n "${{ parameters.filterLayers }}" ]; then
+              LAYER_ARG="--layers $(echo '${{ parameters.filterLayers }}' | tr ',' ' ')"
+            fi
+            PHASE_ARG=""
+            if [ -n "${{ parameters.filterPhases }}" ]; then
+              PHASE_ARG="--phases $(echo '${{ parameters.filterPhases }}' | tr ',' ' ')"
+            fi
+            FAIL_ARG=""
+            if [ "${{ parameters.failFast }}" = "True" ]; then
+              FAIL_ARG="--fail-fast"
+            fi
+
+            python run_validation.py \
+              --config $(configPath) \
+              $TAG_ARG $LAYER_ARG $PHASE_ARG $FAIL_ARG \
+              --workers 8 \
+              --output-dir $(Build.ArtifactStagingDirectory)/reports/nightly
+          displayName: Run full migration validation
+          env:
+            SQL_SERVER: $(SQL_SERVER)
+            SQL_DATABASE: $(SQL_DATABASE)
+            SQL_USERNAME: $(SQL_USERNAME)
+            SQL_PASSWORD: $(SQL_PASSWORD)
+            SQL_TRUSTED_CONNECTION: $(SQL_TRUSTED_CONNECTION)
+            SQL_DRIVER: $(SQL_DRIVER)
+            FABRIC_WORKSPACE: $(FABRIC_WORKSPACE)
+            FABRIC_LAKEHOUSE: $(FABRIC_LAKEHOUSE)
+            FABRIC_SERVER: $(FABRIC_SERVER)
+            FABRIC_SQL_ENDPOINT: $(FABRIC_SQL_ENDPOINT)
+            FABRIC_DATABASE: $(FABRIC_DATABASE)
+            FABRIC_AUTHENTICATION: $(FABRIC_AUTHENTICATION)
+            FABRIC_DRIVER: $(FABRIC_DRIVER)
+            FABRIC_USERNAME: $(FABRIC_USERNAME)
+            FABRIC_PASSWORD: $(FABRIC_PASSWORD)
+
+        - task: PublishPipelineArtifact@1
+          condition: always()
+          inputs:
+            targetPath: $(Build.ArtifactStagingDirectory)/reports/nightly
+            artifact: nightly-validation-reports
+          displayName: Publish nightly validation reports
+
+        # Optional: send notification on failure
+        # - task: SendEmail@1 / Teams webhook / Slack notification

@@ -1,0 +1,14 @@
+# ======================================================================
+# GENERAL VALIDATION / FRAMEWORK CONFIGURATION
+# Every validation definition lives in a sibling document in this
+# folder. `config_paths.validations` in config/execution.yml globs them
+# all and the loader deep-merges them into one configuration, so no
+# value is declared twice.
+# ======================================================================
+
+version: '1.0'
+framework:
+  name: migration-validator_v6
+  description: Config driven ETL validation framework
+
+validations: {}

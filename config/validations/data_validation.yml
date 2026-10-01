@@ -1,0 +1,16 @@
+# ======================================================================
+# DATA VALIDATION
+# ======================================================================
+
+validations:
+  data_validation:
+    row_count:
+      enabled: true
+    key_validation:
+      enabled: true
+    null_validation:
+      enabled: true
+    duplicate_check:
+      enabled: true
+    aggregate_validation:
+      enabled: false

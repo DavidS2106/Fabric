@@ -1,0 +1,44 @@
+# ======================================================================
+# MASTER EXECUTION CONFIGURATION
+# ----------------------------------------------------------------------
+# This document holds the run's identity only. Every other execution
+# section lives in its own document under `config_files` below, and the
+# loader merges them all before anything reads `config_paths`, so the
+# framework sees one complete execution document.
+#
+# One setting has exactly one home: a section declared both here and in
+# an included document is a configuration error, not a silent override.
+# ======================================================================
+
+project:
+  name: "DW to Fabric Migration"
+  run_id_prefix: "MIG"
+
+source: sql_server_source
+target: fabric_target
+
+execution:
+  validation_categories:
+    - migration_validation
+    - data_quality_validation
+    - data_value_validation
+    - edge_case_validation
+    - audit_validation
+
+# ======================================================================
+# EXECUTION CONFIGURATION DOCUMENTS
+# ----------------------------------------------------------------------
+# Paths are relative to the project root. `config_paths` is included
+# here rather than declared inline because it is discovery
+# configuration like any other, and it is merged in before the loader
+# uses it.
+# ======================================================================
+config_files:
+  execution_control: config/execution/execution_control.yml
+  checkpoint: config/execution/checkpoint.yml
+  config_paths: config/execution/config_paths.yml
+  preflight: config/execution/preflight.yml
+  run_defaults: config/execution/run_defaults.yml
+  performance: config/performance.yml
+  report_output: config/reporting/report_output.yml
+  reporting: config/reporting/reporting.yml

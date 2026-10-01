@@ -1,0 +1,22 @@
+# ======================================================================
+# AUDIT VALIDATION
+# ======================================================================
+
+validations:
+  audit_validation:
+    enabled: true
+
+    scope:
+      audit_columns: target_only
+      count_reconciliation: source_to_target
+
+    audit_columns:
+      - _EtlLoadDateTime
+      - _EtlSource
+      - _RowHashValue
+
+    checks:
+      - name: audit_column_population_check
+        enabled: true
+      - name: audit_count_reconciliation_check
+        enabled: true

@@ -1,0 +1,20 @@
+# ======================================================================
+# SCHEMA VALIDATION
+# ======================================================================
+
+validations:
+  schema_validation:
+    connection_validation:
+      enabled: true
+    database_availability:
+      enabled: true
+    schema_availability:
+      enabled: true
+    table_availability:
+      enabled: true
+    column_availability:
+      enabled: true
+    key_column_availability:
+      enabled: true
+    object_validation:
+      enabled: true

@@ -1,0 +1,63 @@
+table:
+  table_id: FILE_005
+  logical_table_name: HCISW022
+  layer: file_to_bronze
+  tags:
+    - file
+    - history
+
+  comparison_mode: file_to_file
+
+  source:
+    connection: local_file
+    paths:
+      historical_backfill: archive/HCISW022\HCISW022\hpapps2new_apps\maximus\Archive\2026
+
+    file:
+      # Discover every file. The global supported_files configuration decides
+      # which extensions are readable; format is resolved from each file.
+      pattern: "*"
+      format: auto
+      options:
+        header: true
+      format_options:
+        dat:
+          header: true
+          engine: python
+          # Continue past legacy records whose field count does not match the
+          # declared layout, without emitting one warning for every row.
+          on_bad_lines: skip
+        xls:
+          header: true
+        xlsx:
+          header: true
+        sas7bdat: {}
+
+  target:
+    type: fabric_lakehouse_file
+    connection: fabric_lakehouse_file
+
+    # The connection supplies Files/bronze as its configured base path.
+    relative_path: sas/hcisw022/history/2026
+
+    matching:
+      strategy: same_file_stem
+      case_sensitive: false
+      missing_target: fail
+      multiple_targets: fail
+
+    file:
+      options:
+        header: true
+      format_options:
+        dat:
+          header: true
+          engine: python
+          on_bad_lines: skip
+        sas7bdat: {}
+
+  key_mappings: []
+
+  incremental:
+    enabled: true
+    strategy: full_hash

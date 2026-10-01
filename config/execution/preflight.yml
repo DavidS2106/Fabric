@@ -1,0 +1,16 @@
+# ======================================================================
+# PREFLIGHT
+# Connection and readiness validation that runs before any phase.
+# ======================================================================
+
+preflight:
+  run_id_prefix: PREFLIGHT
+  report_name: preflight_validation
+  timestamp_format: '%Y%m%d_%H%M%S'
+  schema_validation:
+    profile_source: selected_phase
+    fixed_profile: smoke_test
+  data_checks:
+    enabled: false
+    checks: []
+    apply_validation_scope: true

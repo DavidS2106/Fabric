@@ -1,0 +1,75 @@
+# ======================================================================
+# REPORT OUTPUT - THE SINGLE SOURCE OF TRUTH
+# Every report path in the framework is resolved from this one block by
+# reporters/report_paths.py::ReportPathResolver. No phase name, folder
+# name, run folder, file name, format folder or ZIP name is spelled out
+# in Python, and no other configuration document may declare an output
+# path.
+#
+#   <root_folder>/<phase folder>/<run folder>/
+#       Excel/Consolidated/<consolidated workbook>
+#       Excel/Tables/<TABLE_ID>/<table workbook>
+#       JSON/
+#       HTML/
+#       <zip name>
+#
+# Consolidated and table-wise reports live *inside* the run folder, so a
+# run can never overwrite, or be packaged with, the reports of an
+# earlier run.
+# ======================================================================
+
+report_output:
+  root_folder: output
+  timestamp_format: '%Y%m%d_%H%M%S'
+  run_folder:
+    format: '{run_id}_{timestamp}'
+  phase_reports:
+    preflight:
+      folder: Preflight
+      zip_name: Preflight_Validation_Report_{timestamp}.zip
+    smoke_test:
+      folder: Smoke
+      zip_name: Smoke_Validation_Report_{timestamp}.zip
+    historical_backfill:
+      folder: Historical_Backfill
+      zip_name: Historical_Backfill_Validation_Report_{timestamp}.zip
+    incremental:
+      folder: Incremental
+      zip_name: Incremental_Validation_Report_{timestamp}.zip
+    full_load:
+      folder: Full_Load
+      zip_name: Full_Load_Validation_Report_{timestamp}.zip
+  generate_excel: true
+  generate_json: true
+  generate_html: true
+  create_disabled_format_folders: false
+  excel:
+    folder: Excel
+    consolidated:
+      enabled: true
+      folder: Excel/Consolidated
+      filename: 'summary.xlsx'
+    per_table:
+      enabled: true
+      folder: Excel/Tables/{table_id}
+      filename: '{table_id}.xlsx'
+  json:
+    folder: JSON
+    consolidated:
+      enabled: true
+      folder: JSON
+      filename: '{phase}_consolidated_{run_id}_{timestamp}.json'
+    per_table:
+      enabled: true
+      folder: JSON/Tables/{table_id}
+      filename: '{table_id}_{phase}_{run_id}_{timestamp}.json'
+  html:
+    folder: HTML
+    consolidated:
+      enabled: true
+      folder: HTML
+      filename: '{phase}_consolidated_{run_id}_{timestamp}.html'
+    per_table:
+      enabled: false
+  zip:
+    enabled: true

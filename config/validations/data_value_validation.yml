@@ -1,0 +1,43 @@
+# ======================================================================
+# DATA VALUE VALIDATION
+# ======================================================================
+
+validations:
+  data_value_validation:
+    enabled: true
+    checks:
+    - name: empty_string_preservation_check
+      enabled: true
+    - name: special_character_check
+      enabled: true
+    - name: unicode_character_check
+      enabled: true
+    - name: max_character_length_check
+      enabled: true
+      mode: exact
+      length_tolerance: 0
+    - name: decimal_precision_value_check
+      enabled: true
+    - name: negative_value_check
+      enabled: true
+    - name: zero_value_check
+      enabled: true
+    - name: large_numeric_value_check
+      enabled: true
+      minimum_absolute_value: 2147483648
+    - name: time_component_check
+      enabled: true
+    - name: timestamp_precision_check
+      enabled: true
+    - name: timezone_preservation_check
+      enabled: true
+    - name: leading_zero_check
+      enabled: true
+    - name: case_preservation_check
+      enabled: true
+    - name: null_preservation_check
+      enabled: true
+    - name: null_vs_blank_check
+      enabled: true
+    - name: default_value_replacement_check
+      enabled: true

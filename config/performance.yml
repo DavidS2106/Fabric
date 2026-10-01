@@ -1,0 +1,135 @@
+# ======================================================================
+# PERFORMANCE AND MEMORY SAFETY CONFIGURATION
+# ======================================================================
+# Rules 1-4: Batch Processing Memory Control
+# - Rule 1: Never load entire table into DataFrame
+# - Rule 2: Never concatenate all batches
+# - Rule 3: Process batch-by-batch, release immediately
+# - Rule 4: YAML-driven batch size and memory limits
+# ======================================================================
+
+performance:
+  batch_processing:
+    # Maximum rows per batch (Rule 3: one batch in memory)
+    batch_size: 50000
+
+    # Hard memory limits (Rule 4: enforced at runtime)
+    max_memory_bytes: 536870912          # 512 MB hard limit
+    max_memory_percentage: 80             # Don't exceed 80% available RAM
+
+    # Batch accumulation safety
+    memory_limit_batch_multiplier: 2      # Allow max 2 batches before warning
+
+    # Garbage collection (Rule 3: explicit cleanup)
+    enable_gc_after_batch: true
+    gc_collect_frequency: 1               # After every batch
+
+    # Spill file configuration (Rule 16: only this-run resources)
+    spill_directory: "output/temp/spill"
+    spill_file_cleanup: true              # Delete spill files after use
+    spill_file_max_age_hours: 24          # Auto-cleanup after 24 hours
+
+  query_execution:
+    # Rule 8: Deterministic ordering mandatory
+    enforce_order_by: true
+
+    # Rule 5-6: Parameterized SQL and key-only predicates
+    use_parameterized_queries: true
+    key_columns_only_in_predicates: true
+
+    # Rule 7: IS NULL handling
+    generate_is_null_for_actual_nulls: true
+
+  timing:
+    # Timing measurement and logging
+    enabled: true                         # Enable timing capture
+    individual_check_timing: true         # Time each check individually
+    group_timing: true                    # Time validators as a group
+    preserve_validator_timing: false      # Use validator's own timing if available
+    allow_orchestrator_override: true     # Orchestrator timing takes precedence
+
+  performance_monitoring:
+    # Slow validation detection
+    enabled: true
+    slow_validation_threshold_seconds: 5.0  # Log if validator takes > 5s
+
+  logging:
+    # Rules 9-11: Safe logging (no SQL, params, full tracebacks)
+    log_query_text: false                 # NEVER log raw SQL
+    log_query_parameters: false           # NEVER log parameter values
+    log_dataframe_contents: false         # NEVER log DataFrame data
+
+    # Query signature logging (Rule 9)
+    log_query_signature: true
+    query_signature_algorithm: "sha256"
+    query_signature_length: 16            # First 16 chars of hash
+
+    # Safe exception logging (Rule 12)
+    log_exception_traceback: false        # Don't include full traceback
+    log_exception_type_only: true         # Log just the exception type
+    max_log_message_length: 500           # Limit log messages to 500 chars
+    max_traceback_lines: 5                # Limit traceback to 5 lines
+
+  memory_error_handling:
+    # Rules 13-18: MemoryError-specific behavior
+    catch_memory_error_separately: true
+    mark_table_error_on_memory: true      # Rule 14
+    continue_after_memory_error: true     # Rule 14: continue to next table
+    cleanup_on_memory_error: true         # Rule 15
+
+    # Rule 17: Don't retry after MemoryError
+    retry_on_memory_error: false
+
+    # Rule 18: Retry limit for timeouts only
+    timeout_retry_limit: 3
+    timeout_retry_backoff_ms: 1000        # 1 second initial backoff
+
+  resource_cleanup:
+    # Rules 15-16: Cleanup in finally, only this-run resources
+    cleanup_in_finally: true
+    delete_temp_cache_entries: true
+    delete_spill_files: true
+    delete_temp_tables: true
+
+    # Only delete resources created THIS run (Rule 16)
+    track_created_resources: true
+
+  runtime_guards:
+    # Rule 20: Runtime guards against prohibited patterns
+    guard_batch_list_accumulation: true   # Assert max 1 batch in memory
+    guard_unbounded_queries: true         # Assert all queries use OFFSET/FETCH
+    guard_sql_in_logs: true               # Assert SQL never logged
+
+  stress_testing:
+    # Rule 23: Memory stress test with configured limit
+    enable_memory_pressure_monitoring: true
+    memory_pressure_check_frequency: 1000 # Check every 1000 rows
+    memory_pressure_threshold: 0.90       # Alert at 90% of max_memory_bytes
+
+    # Rule 22: Test with various data patterns
+    test_small_tables: true
+    test_large_tables: true
+    test_null_heavy_tables: true
+    test_duplicate_key_tables: true
+    test_no_key_tables: true
+
+# ======================================================================
+# BACKWARDS COMPATIBILITY
+# ======================================================================
+# These settings maintain compatibility with existing configurations
+# while enforcing new memory safety rules.
+# ======================================================================
+
+legacy:
+  # Legacy batch readers might still use these
+  max_retries: 3
+  timeout_seconds: 300
+
+# ======================================================================
+# TUNING NOTES
+# ======================================================================
+# Batch Size: 50,000 rows/batch * ~1KB/row = ~50MB/batch
+# Memory Limit: 512MB supports 10 concurrent batches
+# GC Frequency: Every batch ensures only 1 batch in memory
+# Retry: Only for timeouts, never for MemoryError
+# ======================================================================

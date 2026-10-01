@@ -1,0 +1,28 @@
+# Source connections support SQL Server -> Fabric and Fabric -> Fabric routes.
+connection_role: source
+
+connections:
+  sql_server_source:
+    enabled: true
+    type: sqlserver
+    params:
+      server: "${SQL_SERVER_SOURCE_SERVER}"
+      database: "{database}"
+      username: "${SQL_SERVER_SOURCE_USERNAME}"
+      password: "${SQL_SERVER_SOURCE_PASSWORD}"
+      trusted_connection: "${SQL_SERVER_SOURCE_TRUSTED_CONNECTION}"
+      driver: "${SQL_SERVER_SOURCE_DRIVER}"
+
+  fabric_source:
+    enabled: false
+    type: fabric
+    params:
+      server: "${FABRIC_SOURCE_SERVER}"
+      sql_endpoint: "${FABRIC_SOURCE_SQL_ENDPOINT}"
+      username: "${FABRIC_SOURCE_USERNAME}"
+      password: "${FABRIC_SOURCE_PASSWORD}"
+      workspace_id: "${FABRIC_SOURCE_WORKSPACE}"
+      lakehouse_id: "${FABRIC_SOURCE_LAKEHOUSE}"
+      database: "${FABRIC_SOURCE_DATABASE}"
+      driver: "${FABRIC_SOURCE_DRIVER}"
+      authentication: "${FABRIC_SOURCE_AUTHENTICATION}"

@@ -1,0 +1,666 @@
+version: "1.0"
+
+# ==========================================================
+# PERFORMANCE CONFIGURATION
+# ----------------------------------------------------------
+# Central performance configuration for the ETL validation
+# framework.
+#
+# All execution-engine selection, batching, concurrency,
+# connection pooling, query retry, scan optimization,
+# diagnostics, and environment-specific tuning must be
+# controlled from this file.
+#
+# Do not hardcode worker counts, batch sizes, thresholds,
+# engine-selection rules, or performance behavior in Python.
+# ==========================================================
+
+performance:
+
+  # ========================================================
+  # EXECUTION ENGINE
+  # ========================================================
+  execution:
+
+    # auto = framework selects the most appropriate engine
+    # using configured capabilities and thresholds.
+    engine: auto
+
+    fallback_enabled: true
+
+    allowed_engines:
+      - spark
+      - odbc
+      - pandas
+
+    strategies:
+
+      engine: auto
+
+      # ----------------------------------------------------
+      # DATABASE PUSHDOWN
+      # ----------------------------------------------------
+      pushdown:
+
+        enabled: true
+
+        # Combine compatible statistics into fewer queries.
+        combine_statistics: true
+
+        # 0 = no configured maximum.
+        max_statistics_per_query: 0
+
+      # ----------------------------------------------------
+      # PANDAS
+      # ----------------------------------------------------
+      pandas:
+
+        enabled: true
+
+        # Prevent very large datasets from being loaded
+        # completely into pandas memory.
+        max_rows_in_memory: 200000
+
+      # ----------------------------------------------------
+      # BATCH EXECUTION
+      # ----------------------------------------------------
+      batch:
+
+        enabled: true
+
+        # auto = framework selects supported batch strategy.
+        strategy: auto
+
+      # ----------------------------------------------------
+      # SPARK
+      # ----------------------------------------------------
+      spark:
+
+        enabled: true
+
+        # Spark becomes eligible above this row count.
+        # Engine selection must still consider availability
+        # and connector capability.
+        threshold_rows: 5000000
+
+        # Maximum pandas materialization when Spark is used.
+        max_pandas_rows: 200000
+
+
+  # ========================================================
+  # ENGINE SELECTION / AVAILABILITY
+  # ----------------------------------------------------------
+  # One capability check per run decides which optional engines
+  # this environment can use. Selecting a fallback engine never
+  # changes validation semantics: the same logical comparison
+  # runs on the configured alternative.
+  # ========================================================
+  engine_selection:
+
+    # auto = use the configured priority and availability.
+    preferred_engine: auto
+
+    availability_check:
+      enabled: true
+      # Probe Java/PySpark/Polars/DuckDB once and reuse the result
+      # for the whole run instead of re-checking per table.
+      cache_for_run: true
+
+    priority:
+      - spark
+      - sql_pushdown
+      - polars
+      - duckdb
+      - pandas
+
+    spark:
+      enabled: true
+      # Spark is optional: a missing JDK/PySpark must never stop
+      # the run. Set required: true only when a run must not
+      # silently execute without Spark.
+      required: false
+      require_java: true
+
+      availability:
+        check_java: true
+        check_java_home: true
+        check_pyspark: true
+
+      # fallback | error
+      on_java_missing: fallback
+      on_pyspark_missing: fallback
+      on_initialization_failure: fallback
+
+    fallback:
+      enabled: true
+      when_spark_unavailable:
+        - sql_pushdown
+        - polars
+        - duckdb
+        - pandas
+
+
+  # ========================================================
+  # PARALLEL EXECUTION
+  # ========================================================
+  parallel_execution:
+
+    enabled: true
+
+    # ----------------------------------------------------
+    # TABLE PARALLELISM
+    # ----------------------------------------------------
+    table_parallelism:
+
+      enabled: true
+
+      # Base/default value.
+      # Environment profiles may override this.
+      max_workers: 4
+
+      executor_type: thread
+
+      fail_fast: false
+
+    # ----------------------------------------------------
+    # VALIDATION PARALLELISM
+    # ----------------------------------------------------
+    validation_parallelism:
+
+      enabled: true
+
+      max_workers_per_table: 4
+
+    # ----------------------------------------------------
+    # SOURCE / TARGET PARALLELISM
+    # ----------------------------------------------------
+    source_target_parallelism:
+
+      enabled: true
+
+      # Normally only two independent sides exist:
+      # source and target.
+      max_workers_per_validation: 2
+
+    # ----------------------------------------------------
+    # BATCH PARALLELISM
+    # ----------------------------------------------------
+    batch_parallelism:
+
+      enabled: false
+
+      max_workers_per_table: 1
+
+    # Maximum validations executing concurrently.
+    max_concurrent_validations: 4
+
+    # Absolute global concurrency ceiling.
+    # Nested parallel execution must never exceed this.
+    global_max_concurrency: 4
+
+
+  # ========================================================
+  # BATCH PROCESSING
+  # ========================================================
+  # ?? GLOBAL SCOPE: All settings here apply to ALL validation phases
+  # (smoke_test, historical_backfill, incremental, full_load)
+  # regardless of which phase is configured in execution_control.yml
+  # ========================================================
+  batch_processing:
+
+    enabled: true
+
+    # GLOBAL: Applied to all validators, all phases, all tables
+    # Reduces 279K rows from 656 batches (83 rows/batch) to 6 batches (50K rows/batch)
+    # Expected improvement: 43-57% faster on 300K+ row tables
+    batch_size: 50000
+
+    max_rows_in_memory: 200000
+
+    strategy: auto
+
+    retry_failed_batch: true
+
+    max_retries: 3
+
+    # ------------------------------------------------------
+    # ADAPTIVE BATCHING
+    # ------------------------------------------------------
+    # Tunes only how many records one physical query fetches,
+    # bounded by the limits below. Record coverage, ordering,
+    # key boundaries and validation results are unchanged.
+    # Sizes must respect max_rows_in_memory (at most half).
+    adaptive_batching:
+
+      enabled: true
+
+      initial_batch_size: 50000
+      minimum_batch_size: 25000
+      maximum_batch_size: 100000
+
+      increase_factor: 1.2
+      decrease_factor: 0.6
+
+      target_batch_seconds: 8
+
+
+  # ========================================================
+  # KEY VALIDATION
+  # ========================================================
+  key_validation:
+
+    # Validate complete configured scope.
+    full_scan: true
+
+    # No sampling for key validation.
+    sampling_enabled: false
+
+    partition_size: 10000
+
+    max_workers: 1
+
+    parallel_execution: false
+
+    reuse_connections: true
+
+
+  # ========================================================
+  # TABLE STRATEGY
+  # ========================================================
+  table_strategy:
+
+    large_table:
+
+      enabled: true
+
+      threshold_rows: 1000000
+
+      # Large tables must use bounded/batched processing.
+      force_batch_processing: true
+
+      # Prevent complete large-table DataFrame loads.
+      allow_full_dataframe_load: false
+
+
+  # ========================================================
+  # HASH SPILL
+  # ----------------------------------------------------------
+  # Local store for streamed hash counts during full hash
+  # comparison. Every engine produces identical multiset
+  # matched/excess arithmetic; only the storage medium differs.
+  # DuckDB is used only when the optional package is installed;
+  # otherwise the next configured engine is selected.
+  # ========================================================
+  hash_spill:
+
+    engine: auto
+
+    # Commit several incoming hash batches in one transaction. The final
+    # partial interval is committed before comparison begins.
+    commit_interval_batches: 20
+
+    priority:
+      - sqlite
+      - duckdb
+      - memory
+
+
+  # ========================================================
+  # TEMPORARY STORAGE SAFETY
+  # ========================================================
+  temporary_storage:
+
+    directory: output/temp
+
+    cleanup_on_success: true
+    cleanup_on_failure: true
+
+    disk_space_check:
+      enabled: true
+
+    minimum_free_space_mb: 2048
+
+
+  # ========================================================
+  # LARGE TABLE CONCURRENCY
+  # ----------------------------------------------------------
+  # Scheduling ceilings for heavy scans (record comparison,
+  # data value validation) on tables above the large-table
+  # threshold. Every validation still executes; only when it
+  # starts changes.
+  # ========================================================
+  large_table_concurrency:
+
+    enabled: true
+
+    max_heavy_validations_per_table: 1
+
+    max_large_tables_per_source_endpoint: 2
+
+    max_large_tables_per_target_endpoint: 2
+
+
+  # ========================================================
+  # SCAN OPTIMIZATION
+  # ========================================================
+  scan_optimization:
+
+    enabled: true
+
+    # ----------------------------------------------------
+    # SHARED STATISTICS SCAN
+    # ----------------------------------------------------
+    # Compatible checks should reuse one database scan
+    # wherever possible.
+    shared_statistics_scan:
+
+      enabled: true
+
+    # ----------------------------------------------------
+    # SHARED RECORD SCAN
+    # ----------------------------------------------------
+    # Record comparison and compatible data-value checks
+    # may consume the same physical batch/read while still
+    # producing independent validation results.
+    shared_record_scan:
+
+      enabled: true
+
+    # Reuse statistics already calculated by other checks.
+    reuse_key_statistics: true
+
+    reuse_row_counts: true
+
+    reuse_null_statistics: true
+
+    reuse_duplicate_statistics: true
+
+    reuse_audit_statistics: true
+
+    # Detect equivalent SQL work before re-querying.
+    duplicate_query_detection:
+
+      enabled: true
+
+
+  # ========================================================
+  # COHORT / MATCHING STRATEGY
+  # ========================================================
+  cohort_processing:
+
+    # Dynamically select a strategy supported by the
+    # configured SQL dialect / connector.
+    strategy: auto
+
+    allowed_strategies:
+      - values_join
+      - key_range
+      - staged_keys
+      - predicate_or
+
+    # SQL Server and Fabric receive large logical key pages as several
+    # bounded VALUES cohorts instead of one oversized statement.
+    values_join:
+
+      max_keys: 500
+
+    # OR predicates must be the last fallback, not the
+    # default large-batch lookup strategy.
+    predicate_or:
+
+      enabled: true
+
+      max_keys: 100
+
+
+  # ========================================================
+  # INCREMENTAL EXECUTION SAFETY
+  # ========================================================
+  incremental_execution:
+
+    # Incremental execution must have a resolvable scope.
+    require_scope: true
+
+    # Supported action must be interpreted by configuration,
+    # not hardcoded in validators.
+    missing_scope_action: error
+
+    # Prevent accidental historical/full-table scanning
+    # when incremental scope cannot be resolved.
+    allow_full_table_fallback: false
+
+
+  # ========================================================
+  # CONNECTION MANAGEMENT
+  # ========================================================
+  connection_management:
+
+    connection_timeout_seconds: 30
+
+    pool:
+
+      enabled: true
+
+      pool_size: 5
+
+      max_overflow: 5
+
+      pool_pre_ping: true
+
+      pool_recycle_seconds: 1800
+
+      # Reuse pools for identical configured connection
+      # identities where safe.
+      reuse_connections: true
+
+
+  # ========================================================
+  # QUERY EXECUTION
+  # ========================================================
+  query_execution:
+
+    # Statement (query) timeout applied to every pooled driver connection.
+    # This is distinct from connection_management.connection_timeout_seconds,
+    # which is the login timeout.
+    timeout_seconds: 120
+
+    retry:
+
+      enabled: true
+
+      # Transient connection failures (link failure, login timeout, server
+      # busy, deadlock victim) are retried up to max_attempts.
+      max_attempts: 3
+
+      delay_seconds: 2
+
+      # A statement timeout is deterministic for an unchanged statement, so it
+      # is NOT retried unless explicitly enabled here. When enabled, a timed-out
+      # statement is attempted at most timeout_max_attempts times in total.
+      retry_on_timeout: false
+
+      timeout_max_attempts: 1
+
+
+  # ========================================================
+  # TIMING
+  # ========================================================
+  timing:
+
+    enabled: true
+
+    individual_check_timing: true
+
+    group_timing: true
+
+    preserve_validator_timing: true
+
+    allow_orchestrator_override: false
+
+
+  # ========================================================
+  # DIAGNOSTICS
+  # ========================================================
+  diagnostics:
+
+    enabled: true
+
+    slow_validation_threshold_seconds: 30
+
+    # Useful for verifying performance optimization.
+    track_database_queries: true
+
+    track_full_scans: true
+
+    track_batch_queries: true
+
+    track_cache_hits: true
+
+    track_cache_misses: true
+
+    track_connection_reuse: true
+
+    track_shared_scans: true
+
+
+  # ========================================================
+  # ENVIRONMENT PROFILES
+  # ----------------------------------------------------------
+  # Resolution order:
+  #
+  # 1. Base performance configuration
+  # 2. Selected environment profile
+  # 3. Explicit supported runtime/CLI override
+  #
+  # Python must not contain environment-specific worker
+  # counts.
+  # ========================================================
+  profiles:
+
+    # ======================================================
+    # DEV
+    # Maximum concurrency/workers = 6
+    # ======================================================
+    dev:
+
+      parallel_execution:
+
+        table_parallelism:
+
+          enabled: true
+
+          max_workers: 4
+
+        validation_parallelism:
+
+          enabled: true
+
+          max_workers_per_table: 4
+
+        source_target_parallelism:
+
+          enabled: true
+
+          max_workers_per_validation: 2
+
+        batch_parallelism:
+
+          enabled: false
+
+          max_workers_per_table: 4
+
+        max_concurrent_validations: 4
+
+        global_max_concurrency: 8
+
+      key_validation:
+
+        max_workers: 1
+
+        partition_size: 5000
+
+
+    # ======================================================
+    # QA
+    # Maximum concurrency/workers = 6
+    # ======================================================
+    qa:
+
+      parallel_execution:
+
+        table_parallelism:
+
+          enabled: true
+
+          max_workers: 4
+
+        validation_parallelism:
+
+          enabled: true
+
+          max_workers_per_table: 4
+
+        source_target_parallelism:
+
+          enabled: true
+
+          max_workers_per_validation: 2
+
+        batch_parallelism:
+
+          enabled: false
+
+          max_workers_per_table: 1
+
+        max_concurrent_validations: 4
+
+        global_max_concurrency: 8
+
+      key_validation:
+
+        max_workers: 4
+
+        partition_size: 10000
+
+
+    # ======================================================
+    # PROD
+    # Higher concurrency controlled independently.
+    # ======================================================
+    prod:
+
+      parallel_execution:
+
+        table_parallelism:
+
+          enabled: true
+
+          max_workers: 6
+
+        validation_parallelism:
+
+          enabled: true
+
+          max_workers_per_table: 4
+
+        source_target_parallelism:
+
+          enabled: true
+
+          max_workers_per_validation: 2
+
+        batch_parallelism:
+
+          enabled: false
+
+          max_workers_per_table: 1
+
+        max_concurrent_validations: 6
+
+        global_max_concurrency: 12
+
+      key_validation:
+
+        max_workers: 4
+
+        partition_size: 50000

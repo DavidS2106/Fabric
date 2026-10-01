@@ -1,0 +1,176 @@
+# ======================================================================
+# REPORTING
+# Report formats, the preflight heading, and the consolidated Excel
+# workbook contract. Sheet order and column order are declared here
+# rather than in Python because they are the report contract.
+# ======================================================================
+
+reporting:
+  formats:
+  - html
+  - json
+  preflight_title: Preflight Connection Validation
+  consolidated_excel:
+    not_applicable: N/A
+    datetime_format: '%Y-%m-%d %H:%M:%S'
+    duration_template: '{seconds:.2f}s'
+    percent_template: '{value}%'
+    record_comparison_check: record_comparison
+    row_count_check: row_count
+    failed_check_statuses:
+    - FAIL
+    - ERROR
+    - FRAMEWORK_ERROR
+    - CONFIG_ERROR
+    pass_rate_thresholds:
+      pass: 95.0
+      warning: 80.0
+    summary_metrics:
+    - metric: Run ID
+      source: run_id
+    - metric: Project
+      source: project_name
+    - metric: Started
+      source: started_at
+    - metric: Duration
+      source: duration
+    - metric: Total Tables
+      source: total_tables
+    - metric: Passed Tables
+      source: passed_tables
+      status_when_zero: WARNING
+      status_when_non_zero: PASS
+    - metric: Failed Tables
+      source: failed_tables
+      status_when_zero: PASS
+      status_when_non_zero: FAIL
+    - metric: Warning Tables
+      source: warning_tables
+      status_when_zero: PASS
+      status_when_non_zero: WARNING
+    - metric: Error Tables
+      source: error_tables
+      status_when_zero: PASS
+      status_when_non_zero: ERROR
+    - metric: Pass Rate
+      source: pass_rate
+      status: threshold
+    sheets:
+    - key: summary
+      name: Summary
+      columns:
+      - Metric
+      - Value
+      - Status
+    - key: table_results
+      name: Table Results
+      columns:
+      - Table ID
+      - Source System
+      - Source Table
+      - Target Table
+      - Layer
+      - Phase
+      - Checks Pass
+      - Checks Fail
+      - Checks Warning
+      - Checks Error
+      - Checks Skip
+      - Overall Status
+      - Duration (s)
+      - Error
+      - Source Rows
+      - Target Rows
+      - Processed Rows
+      - Table Wall Clock (s)
+      - Sequential Validation Sum (s)
+      - Slowest Validation
+      - Slowest Validation (s)
+    - key: failed_checks
+      name: Failed Checks
+      columns:
+      - Table ID
+      - Source
+      - Target
+      - Layer
+      - Phase
+      - Validation Category
+      - Check Name
+      - Status
+      - Source Value
+      - Target Value
+      - Difference
+      - Difference Percentage
+      - Failure Reason
+      - Message
+      - Execution Time (s)
+    - key: all_check_detail
+      name: All Check Detail
+      columns:
+      - Table ID
+      - Source FQN
+      - Target FQN
+      - Layer
+      - Phase
+      - Check Name
+      - Status
+      - Source Value
+      - Target Value
+      - Difference
+      - Difference Percentage
+      - Message
+      - Comparison Mode
+      - Actual Comparison Strategy
+      - Sampling Strategy
+      - Key Columns Used
+      - Records Checked
+      - Matched Records
+      - Mismatch Records
+      - Execution Time (s)
+      - Source Record Count
+      - Target Record Count
+      - Audit Columns Checked
+      - Validation Group
+      - Start Time
+      - End Time
+      - Wall Clock Execution Time (s)
+    - key: final_reconciliation
+      name: Final Reconciliation
+      columns:
+      - Table ID
+      - Table Name
+      - Source Records
+      - Target Records
+      - Comparison Mode
+      - Actual Comparison Strategy
+      - Sampling Strategy
+      - Key Columns Used
+      - Records Checked
+      - Total Matched
+      - Exported Matched
+      - Total Mismatched
+      - Exported Mismatched
+      - Missing In Source
+      - Missing In Target
+      - Total Excess In Source
+      - Exported Excess In Source
+      - Total Excess In Target
+      - Exported Excess In Target
+      - Record Match %
+      - Validation Check Pass %
+      - Status
+    formatting:
+      header_color: 1D4ED8
+      header_font_color: FFFFFF
+      freeze_panes: A2
+      max_column_width: 60
+      status_colors:
+        PASS: 22C55E
+        FAIL: EF4444
+        WARNING: F59E0B
+        WARN: F59E0B
+        ERROR: DC2626
+        FRAMEWORK_ERROR: DC2626
+        CONFIG_ERROR: F97316
+        SKIP: 64748B
+        DEFAULT: FFFFFF

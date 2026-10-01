@@ -1,0 +1,14 @@
+# ======================================================================
+# ADVANCED VALIDATION
+# ======================================================================
+
+validations:
+  advanced_validation:
+    referential_integrity:
+      enabled: false
+    scd_validation:
+      enabled: false
+    business_rules:
+      enabled: false
+    pii_scan:
+      enabled: false

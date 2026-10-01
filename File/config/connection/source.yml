@@ -1,0 +1,34 @@
+# ======================================================================
+# FILE SOURCE CONNECTIONS
+# ----------------------------------------------------------------------
+# Every path is configuration. No root, folder or file name is written
+# in Python. `${...}` placeholders are resolved from the environment
+# (see File/config/connection/.env.example).
+# ======================================================================
+
+connection_role: source
+
+connections:
+
+  local_file:
+    enabled: true
+    type: local_file
+
+    params:
+      root_path: "${FILE_SOURCE_ROOT}"
+
+  # Fabric Lakehouse Files read directly from OneLake. Downloaded files enter
+  # the existing local staging and validation pipeline unchanged.
+  fabric_lakehouse_source:
+    enabled: true
+    type: fabric_lakehouse
+
+    params:
+      sql_endpoint: "${FABRIC_RAW_SQL_ENDPOINT}"
+      workspace: "${FABRIC_RAW_WORKSPACE}"
+      lakehouse: "${FABRIC_RAW_LAKEHOUSE}"
+      authentication: "${FABRIC_RAW_AUTHENTICATION}"
+      onelake_account_url: "https://onelake.dfs.fabric.microsoft.com"
+
+    file_storage:
+      base_path: "${FABRIC_RAW_LAKEHOUSE_PATH}"

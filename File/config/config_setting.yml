@@ -1,0 +1,153 @@
+# ======================================================================
+# FILE VALIDATION — GLOBAL FRAMEWORK BEHAVIOUR
+# ----------------------------------------------------------------------
+# This document holds *only* how the File capability ingests, discovers
+# and routes files. It never enables or disables a validation: which
+# validations run for a phase remains owned by config/validations/*.yml
+# and config/validations/validation_profiles.yml, exactly as it is for
+# the SQL Server -> Fabric and Fabric -> Fabric routes.
+# ======================================================================
+
+file_validation:
+
+  enabled: true
+
+  # Every file extension the reader is allowed to route. An extension that
+  # is discovered but not listed here is rejected (and reported), never
+  # guessed at.
+  supported_files:
+    - csv
+    - txt
+    - dat
+    - json
+    - xlsx
+    - xls
+    - sas7bdat
+    - parquet
+    - zip
+
+  # ------------------------------------------------------------------
+  # UNIVERSAL DELIMITERS
+  # ------------------------------------------------------------------
+  # No delimiter is ever assumed. A table may state one explicitly in
+  # `source.file.options.delimiter`; when it does not and `auto_detect`
+  # is on, the reader sniffs the sample below and picks the single best
+  # candidate from this list. `on_ambiguous` decides what happens when
+  # two candidates score equally.
+  # ------------------------------------------------------------------
+  delimiters:
+    auto_detect: true
+    sample_bytes: 65536
+    sample_lines: 50
+    on_ambiguous: error          # error | first_match
+    on_undetected: error         # error | first_match
+    candidates:
+      - name: comma
+        value: ","
+      - name: pipe
+        value: "|"
+      - name: tab
+        value: "\t"
+      - name: semicolon
+        value: ";"
+      - name: colon
+        value: ":"
+      - name: caret
+        value: "^"
+      - name: tilde
+        value: "~"
+      - name: hash
+        value: "#"
+      - name: at
+        value: "@"
+      - name: asterisk
+        value: "*"
+      - name: space
+        value: " "
+      - name: unit_separator
+        value: "\x1F"
+      - name: record_separator
+        value: "\x1E"
+      - name: group_separator
+        value: "\x1D"
+      - name: file_separator
+        value: "\x1C"
+      - name: bell
+        value: "\x07"
+
+  discovery:
+    recursive: true
+    ignore_hidden: true
+    follow_symlinks: false
+    # A configured source path that resolves to nothing.
+    on_no_files: fail            # fail | skip
+
+  archive:
+    enabled: true
+    nested_zip: true
+    max_depth: 5
+    max_members: 5000
+    max_uncompressed_bytes: 5368709120
+    # Extraction target. Cleared before each run unless `retain` is true.
+    extract_directory: File/output/.archive
+    retain: false
+
+  header:
+    configurable: true
+    allow_headerless_files: true
+    # When a file in a set carries no header, the column order of the
+    # first file that does may be reused for it. Columns are never
+    # invented, renamed or reordered; an incompatible file is rejected.
+    reuse_schema_from_first_headed_file: true
+    on_missing_schema: fail      # fail | skip
+
+  comparison_modes:
+    - file_to_file
+    - files_to_table
+
+  phases:
+    - smoke_test
+    - historical_backfill
+    - incremental
+    - full_load
+
+  # ------------------------------------------------------------------
+  # STAGING
+  # ------------------------------------------------------------------
+  # File content is streamed, in bounded chunks, into a local relational
+  # store so the *existing* validation engine reads it with the same SQL
+  # it issues against every other platform. No file is ever fully
+  # concatenated in memory.
+  # ------------------------------------------------------------------
+  staging:
+    # Scratch SQLite databases must not live in the OneDrive-backed report
+    # tree. They are deleted before reports are generated and after the run.
+    directory: "${TEMP}/MigrationValidator/File/.staging"
+    chunk_rows: 50000
+    retain_after_run: false
+    # as_read  - keep the types the reader produced
+    # text     - stage every column as text and let the framework's
+    #            configured value normalization do the comparing
+    column_types: as_read
+
+  existing_framework:
+    reuse_validation_config: true
+    reuse_validation_engine: true
+    reuse_normalization: true
+    reuse_record_comparison: true
+    reuse_sampling: true
+    reuse_hashing: true
+    reuse_audit_validation: true
+    reuse_reporting: true
+    reuse_evidence: true
+
+  output:
+    # Relative paths are resolved from the project root.
+    base_path: "File/output"
+    reports: reports
+    evidence: evidence
+    reconciliation: reconciliation
+    reconciliation_formats:
+      - json
+      - csv
+      - excel

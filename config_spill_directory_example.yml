@@ -1,0 +1,268 @@
+# Example Configuration for Spill Directory
+# This file shows all supported configurations for spill_directory in record-level comparison
+
+---
+
+# OPTION 1: Explicit spill_directory (Recommended for Production)
+# Uses a dedicated directory for hash spill files
+# Cleanup automatic after each table validation
+
+comparison_settings:
+  full_data_comparison:
+    batching:
+      batch_size: 50000
+      max_retries: 2
+      # EXPLICIT SPILL DIRECTORY - Best for production with dedicated SSD
+      spill_directory: "output/spill"
+      parallel_execution:
+        enabled: true
+        worker_count: 2
+
+---
+
+# OPTION 2: No spill_directory specified (Recommended for Development)
+# Falls back to output/temp automatically
+# Cleanup automatic after each table validation
+
+comparison_settings:
+  full_data_comparison:
+    batching:
+      batch_size: 50000
+      max_retries: 2
+      # OMITTED - uses output/temp fallback automatically
+      parallel_execution:
+        enabled: true
+        worker_count: 2
+
+---
+
+# OPTION 3: Null spill_directory (Explicit Fallback)
+# Explicitly use fallback chain
+# Same as OPTION 2 but more explicit
+
+comparison_settings:
+  full_data_comparison:
+    batching:
+      batch_size: 50000
+      max_retries: 2
+      spill_directory: null  # Explicitly use fallback
+      parallel_execution:
+        enabled: true
+        worker_count: 2
+
+---
+
+# OPTION 4: Override via Execution Config
+# Temporary storage directory used as fallback for spill_directory
+# Useful when spill_directory not configured
+
+execution:
+  temporary_storage:
+    directory: "var/temp"  # Used as spill fallback if batching.spill_directory not set
+    subdirectory: "spill"
+
+---
+
+# OPTION 5: Full Configuration Example (All Options)
+
+comparison_settings:
+  # Global comparison defaults
+  default_mode: "full_comparison"
+  supported_modes:
+    - "sample_comparison"
+    - "full_comparison"
+    - "hash_comparison"
+
+  # Hash comparison configuration
+  full_data_comparison:
+    enabled: true
+    mode: "full_comparison"
+
+    # Sampling (not used in full_comparison)
+    sampling:
+      enabled: false
+      strategy: "random"
+      seed: 12345
+
+    # Batching configuration
+    batching:
+      # Batch size for processing
+      batch_size: 50000
+
+      # Max batch retries on failure
+      max_retries: 2
+
+      # SPILL DIRECTORY - optional, falls back to output/temp
+      spill_directory: "output/spill"
+
+      # Temporary storage for spill files
+      temporary_storage:
+        enabled: true
+
+      # Parallel ingestion configuration
+      parallel_execution:
+        enabled: true
+        worker_count: 2
+
+        # Key cohort strategy for large tables
+        key_cohort_strategy: "auto"
+        cohort_chunk_size: 50000
+
+    # Hash comparison settings
+    hash_comparison:
+      spill:
+        # Override batching spill_directory per validator
+        directory: "output/spill"
+
+      # Parallel hash generation
+      parallel_ingest: true
+      ingest_workers: 2
+
+      # How to handle parallel ingestion failures
+      failure_fallback:
+        strategy: "sequential_retry"  # or "discard"
+        enabled: true
+
+  # Key comparison settings
+  full_comparison:
+    mode_name: "full_comparison"
+    record_comparison:
+      enabled: true
+      mode: "full_comparison"
+
+execution:
+  # Execution engine configuration
+  engine_type: "pandas"
+
+  # Temporary storage (fallback for spill_directory)
+  temporary_storage:
+    directory: "output/temp"
+    subdirectory: "spill"
+    cleanup_on_completion: true
+    max_disk_space_mb: 10000
+
+  # Parallel execution settings
+  parallel_execution:
+    enabled: true
+    table_parallelism:
+      enabled: true
+      max_workers: 4
+
+    # Source-target parallel reading
+    source_target_parallelism:
+      enabled: true
+      max_workers_per_validation: 2
+
+---
+
+# DIRECTORY FALLBACK CHAIN (Priority Order)
+
+# The validator searches for spill_directory in this order:
+#
+# 1. _hash_comparison_config["spill"]["directory"]
+#    Example: hash_comparison.spill.directory in config
+#
+# 2. batching["spill_directory"]
+#    Example: comparison_settings.full_data_comparison.batching.spill_directory
+#
+# 3. execution_config.temporary_storage.directory
+#    Example: execution.temporary_storage.directory
+#
+# 4. "output/temp"
+#    Hard-coded fallback, always available
+
+---
+
+# CLEANUP BEHAVIOR
+
+# Spill files are automatically cleaned up after each table validation:
+#
+# 1. Validator completes record comparison
+# 2. Spill directory (e.g., output/spill or output/temp) is removed
+# 3. Log entry confirms cleanup: "Cleaned up spill directory: ..."
+# 4. Next table validation uses fresh spill directory
+#
+# Result: No disk space accumulation across tables
+
+---
+
+# MIGRATION EXAMPLES
+
+# BEFORE (would crash with KeyError if spill_directory missing):
+# comparison_settings:
+#   full_data_comparison:
+#     batching:
+#       batch_size: 50000
+#       # ERROR: KeyError: 'spill_directory'
+
+# AFTER (works with automatic fallback):
+# comparison_settings:
+#   full_data_comparison:
+#     batching:
+#       batch_size: 50000
+#       # OK: Uses output/temp automatically
+
+---
+
+# RECOMMENDATIONS
+
+# Development Environment:
+# - Use OPTION 2 (no spill_directory specified)
+# - Automatically uses output/temp
+# - Automatic cleanup after each table
+# - Minimal disk space impact
+
+# Staging Environment:
+# - Use OPTION 1 with custom directory
+# - Example: spill_directory: "var/staging/spill"
+# - Monitor disk usage
+# - Verify cleanup works
+
+# Production Environment:
+# - Use OPTION 1 with dedicated fast storage
+# - Example: spill_directory: "/mnt/fast-ssd/spill"
+# - Ensure sufficient disk space
+# - Monitor cleanup logs for any failures
+
+---
+
+# YAML SYNTAX REFERENCE
+
+# Explicit string:
+spill_directory: "output/spill"
+
+# Null/None (uses fallback):
+spill_directory: null
+
+# Relative path:
+spill_directory: "output/spill"
+
+# Absolute path:
+spill_directory: "/var/temp/spill"
+
+# Environment variable substitution (if supported):
+# spill_directory: "${TEMP_DIR}/spill"
+
+# Omit entirely (uses fallback):
+# (no spill_directory key)
+
+---
+
+# VALIDATION BEHAVIOR
+
+# Configuration Validation:
+# - Optional: spill_directory is optional (no KeyError)
+# - If provided: must be non-empty string
+# - If null: explicitly use fallback
+# - If missing: use fallback chain automatically
+
+# Runtime Validation:
+# - Try to create directory
+# - If failure: use emergency fallback (output/temp)
+# - Log warning if fallback used
+# - Continue validation (non-blocking error)
+
+# Cleanup Validation:
+# - After each table: remove spill directory
+# - If cleanup fails: log warning (non-blocking)
+# - Never block validation on cleanup failure

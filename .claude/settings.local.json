@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($f=\"C:\\\\Users\\\\RAGHUN~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-RaghunathVeerasamy-Downloads-04-09-04-09-migration-vw1-0---Run3-migration-vw1-0---Run3\\\\8c32ebed-e379-4406-b14a-1f7f27a83efc\\\\tasks\\\\bt09ju8aj.output\"; if \\(\\(Get-Item $f\\).Length -gt 0\\) { Get-Content $f -Tail 12 } else { \"still running\"; Get-Process python -ErrorAction SilentlyContinue | Select-Object Id,CPU | Format-Table -AutoSize })"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+# ======================================================================
+# CHECKPOINT
+# Restart state for batch validation, and the per-table incremental
+# boundaries. Read by core/checkpoint.py::CheckpointStore.
+# ======================================================================
+
+checkpoint:
+  enabled: true
+  directory: output/checkpoints
+  resume_failed_run: true

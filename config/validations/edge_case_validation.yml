@@ -1,0 +1,31 @@
+# ======================================================================
+# EDGE CASE VALIDATION
+# ======================================================================
+
+validations:
+  edge_case_validation:
+    enabled: true
+    checks:
+    - name: zero_record_dataset_check
+      enabled: true
+    zero_record_policy:
+      both_empty: stop_downstream
+      source_empty: stop_downstream
+      target_empty: stop_downstream
+      downstream_allowed_when_stopped:
+      - audit_validation
+      # Results a named validation reports instead of running when the
+      # condition is observed. Both sides empty is a valid migration outcome
+      # for record comparison: there is nothing to compare and nothing is
+      # missing on either side, so it reports PASS without reading any record.
+      # Source-only and target-only empty declare nothing here, so they keep
+      # the configured stop_downstream behavior above unchanged.
+      both_empty_validation_overrides:
+        record_comparison:
+          status: PASS
+          message: >
+            Record comparison passed because both source and target contain
+            zero records. No record-level comparison was required.
+      status_when_stopped: SKIP
+      stopped_message: Skipped because the configured zero-record policy stopped downstream validation
+        for an empty dataset.

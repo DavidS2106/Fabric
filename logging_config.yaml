@@ -1,0 +1,88 @@
+# Logging Configuration - Suppress Verbose SQL Output
+# Place in project root to reduce command prompt noise
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+  concise:
+    format: '[%(levelname)s] %(name)s: %(message)s'
+  minimal:
+    format: '%(message)s'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO  # Only INFO and above, suppress DEBUG
+    formatter: concise
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: standard
+    filename: validation.log
+
+loggers:
+  # Suppress verbose logging from database drivers
+  sqlalchemy:
+    level: WARNING  # Suppress SQL echo
+    propagate: false
+    handlers:
+      - file
+
+  sqlalchemy.engine:
+    level: WARNING
+    propagate: false
+    handlers:
+      - file
+
+  sqlalchemy.pool:
+    level: WARNING
+    propagate: false
+    handlers:
+      - file
+
+  # Suppress SQLite verbose output
+  sqlite:
+    level: WARNING
+    propagate: false
+    handlers:
+      - file
+
+  # Suppress pyodbc verbose output
+  pyodbc:
+    level: WARNING
+    propagate: false
+    handlers:
+      - file
+
+  # Core framework loggers - keep at reasonable level
+  core:
+    level: INFO
+    propagate: true
+    handlers:
+      - console
+      - file
+
+  validators:
+    level: INFO
+    propagate: true
+    handlers:
+      - console
+      - file
+
+  record_comparison_production:
+    level: INFO
+    propagate: false
+    handlers:
+      - console
+      - file
+
+root:
+  level: INFO
+  handlers:
+    - console
+    - file

@@ -1,0 +1,9 @@
+# ======================================================================
+# THRESHOLDS
+# ======================================================================
+
+thresholds:
+  row_count_tolerance:
+    tolerance_pct: 0.0
+  aggregate_tolerance:
+    tolerance_pct: 0.0

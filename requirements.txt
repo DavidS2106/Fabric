@@ -1,0 +1,21 @@
+# ── Core ─────────────────────────────────────────────────────
+pyyaml>=6.0
+pandas>=2.0.0
+openpyxl>=3.1.0
+python-dotenv>=1.0.0
+
+# ── Source Connectors ─────────────────────────────────────────
+pyodbc>=4.0.39                  # SQL Server + Fabric SQL Endpoint
+SQLAlchemy>=2.0.0               # Pandas SQL queries over pyodbc
+
+# ── PySpark (Fabric Notebook / local Spark) ───────────────────
+pyspark>=3.4.0                # Uncomment for local Spark
+ delta-spark>=2.4.0            # Uncomment for local Delta Lake
+
+# ── Testing ───────────────────────────────────────────────────
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# ── Optional: enhanced data quality ──────────────────────────
+ great-expectations>=0.18.0   # Uncomment to use GE suites
+soda-core>=3.3.0             # Uncomment to use Soda checks

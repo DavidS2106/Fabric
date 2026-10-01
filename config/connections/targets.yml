@@ -1,0 +1,45 @@
+# Target connections support SQL Server and Microsoft Fabric destinations.
+connection_role: target
+
+connections:
+  sql_server_target:
+    enabled: false
+    type: sqlserver
+    params:
+      server: "${SQL_SERVER_TARGET_SERVER}"
+      database: "{database}"
+      username: "${SQL_SERVER_TARGET_USERNAME}"
+      password: "${SQL_SERVER_TARGET_PASSWORD}"
+      trusted_connection: "${SQL_SERVER_TARGET_TRUSTED_CONNECTION}"
+      driver: "${SQL_SERVER_TARGET_DRIVER}"
+
+  # The Fabric SQL endpoint the File -> Table route validates against. It is a
+  # connection like any other: File table documents reference it by name and
+  # never repeat an endpoint, driver or credential of their own.
+  fabric:
+    enabled: true
+    type: fabric
+    params:
+      server: "${FABRIC_SQL_ENDPOINT}"
+      sql_endpoint: "${FABRIC_SQL_ENDPOINT}"
+      database: "${FABRIC_SQL_DATABASE}"
+      workspace_id: "${FABRIC_SQL_WORKSPACE}"
+      lakehouse_id: "${FABRIC_SQL_LAKEHOUSE}"
+      authentication: "${FABRIC_SQL_AUTHENTICATION}"
+      driver: "${FABRIC_SQL_DRIVER}"
+      username: "${FABRIC_SQL_USERNAME}"
+      password: "${FABRIC_SQL_PASSWORD}"
+
+  fabric_target:
+    enabled: true
+    type: fabric
+    params:
+      server: "${FABRIC_TARGET_SERVER}"
+      sql_endpoint: "${FABRIC_TARGET_SQL_ENDPOINT}"
+      username: "${FABRIC_TARGET_USERNAME}"
+      password: "${FABRIC_TARGET_PASSWORD}"
+      workspace_id: "${FABRIC_TARGET_WORKSPACE}"
+      lakehouse_id: "${FABRIC_TARGET_LAKEHOUSE}"
+      database: "${FABRIC_TARGET_DATABASE}"
+      driver: "${FABRIC_TARGET_DRIVER}"
+      authentication: "${FABRIC_TARGET_AUTHENTICATION}"

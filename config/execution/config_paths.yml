@@ -1,0 +1,12 @@
+# ======================================================================
+# CONFIG PATHS
+# Where the loader discovers every other configuration document.
+# Globs are resolved relative to the project root.
+# ======================================================================
+
+config_paths:
+  connections: config/connections/*.yml
+  tables: config/tables/**/*.y*ml
+  validations: config/validations/*.y*ml
+  performance: config/performance/performance.yaml
+  dialects: config/dialects/*.y*ml

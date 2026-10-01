@@ -1,0 +1,64 @@
+# ======================================================================
+# FILE TARGET CONNECTIONS
+# ----------------------------------------------------------------------
+# Two kinds of target are supported:
+#
+#   fabric_lakehouse   a Lakehouse. Its OneLake file storage serves a
+#                      `fabric_lakehouse_file` target, and its SQL
+#                      analytics endpoint serves a `fabric_sql_table`
+#                      target.
+#   connection_reference
+#                      a *reference* to a connection the project already
+#                      defines in config/connections/*.yml. The Fabric
+#                      SQL details are never repeated here.
+# ======================================================================
+
+connection_role: target
+
+connections:
+
+  fabric_lakehouse_file:
+    enabled: true
+    type: fabric_lakehouse
+
+    params:
+
+      # ---- REQUIRED -------------------------------------------------
+      # A fabric_lakehouse connection cannot serve a target until all
+      # five of these resolve. A table that uses it reports a
+      # configuration error naming whichever ones are missing.
+      sql_endpoint: "${FABRIC_RAW_SQL_ENDPOINT}"
+      workspace: "${FABRIC_RAW_WORKSPACE}"
+      lakehouse: "${FABRIC_RAW_LAKEHOUSE}"
+      authentication: "${FABRIC_RAW_AUTHENTICATION}"
+      onelake_account_url: "https://onelake.dfs.fabric.microsoft.com"
+
+      # ---- OPTIONAL -------------------------------------------------
+      # Read files through an existing mount instead of over OneLake (a
+      # Fabric notebook mounts the lakehouse under /lakehouse/default).
+      local_mount_path: "${FABRIC_RAW_LOCAL_MOUNT}"
+      # Only needed when a fabric_sql_table target names this connection,
+      # so the lakehouse's SQL analytics endpoint serves it directly.
+      database: "${FABRIC_RAW_DATABASE}"
+      driver: "${FABRIC_RAW_DRIVER}"
+
+    # Optional. Unset, a target's relative_path resolves from the
+    # lakehouse root instead of from a base folder inside it.
+    file_storage:
+      base_path: "${FABRIC_RAW_LAKEHOUSE_PATH}"
+
+  fabric:
+    enabled: true
+
+    # Reuse the project's Fabric SQL connection. The endpoint, database,
+    # workspace, lakehouse, driver, credentials and authentication stay in
+    # config/connections/*.yml and config/connections/.env only; a File
+    # table document references this name and repeats none of them.
+    connection_reference: fabric
+
+  # Reuse the existing Fabric SQL connection named `fabric_target` from
+  # config/connections/targets.yml. Endpoint and credentials remain owned by
+  # that project connection and are not duplicated in the File configuration.
+  fabric_target:
+    enabled: true
+    connection_reference: fabric_target

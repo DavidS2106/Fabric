@@ -1,0 +1,179 @@
+version: "1.0"
+
+# ==========================================================
+# SQL DIALECT PROFILES
+# ----------------------------------------------------------
+# Every statement the validation engine issues is rendered
+# through one of these profiles. No validator contains SQL
+# syntax of its own.
+#
+# A connection selects its profile with `sql_dialect: <name>`
+# in the connection YAML, or inherits the profile its
+# connector class declares. `default_dialect` is used only
+# when neither is available.
+#
+# A new database platform is supported by adding a profile
+# here; no Python change is required.
+# ==========================================================
+
+sql_dialects:
+
+  default_dialect: tsql
+
+  dialects:
+
+    # ------------------------------------------------------
+    # Transact-SQL: SQL Server, Azure SQL, Fabric Warehouse
+    # ------------------------------------------------------
+    tsql:
+      row_limit_style: top
+      row_limit_keyword: "TOP"
+      count_all_function: "COUNT_BIG"
+      count_column_function: "COUNT"
+      identifier_quote_open: "["
+      identifier_quote_close: "]"
+      identifier_quote_escape: "]]"
+      random_order_expression: "NEWID()"
+      # Deterministic row signature used to select a keyless sample with a
+      # predicate instead of ordering the whole table. CHECKSUM takes the
+      # column list directly and is stable for unchanged data, so the same
+      # rows are sampled on every run and the statement needs no sort.
+      # Widen before ABS: CHECKSUM can return INT_MIN (-2147483648), whose
+      # positive magnitude fits BIGINT but overflows INT.
+      row_signature_expression: "ABS(CAST(CHECKSUM({columns}) AS BIGINT))"
+      text_cast_type: "NVARCHAR(MAX)"
+      null_sort_order: nulls_first
+      supports_row_number: true
+      supports_values_constructor: true
+      values_row_alias: "__mv_keyset"
+      derived_table_requires_alias: true
+      cohort_strategy_preference:
+        - values_join
+        - key_range
+        - predicate_or
+
+    # ------------------------------------------------------
+    # ANSI SQL:2008 - portable baseline
+    # ------------------------------------------------------
+    ansi:
+      row_limit_style: fetch_first
+      row_limit_keyword: "FETCH FIRST"
+      count_all_function: "COUNT"
+      count_column_function: "COUNT"
+      identifier_quote_open: '"'
+      identifier_quote_close: '"'
+      identifier_quote_escape: '""'
+      random_order_expression: null
+      # No portable multi-column signature expression: a keyless sample on
+      # this engine stays deterministic by ordering on the compared columns.
+      row_signature_expression: null
+      text_cast_type: "VARCHAR(4000)"
+      null_sort_order: nulls_last
+      supports_row_number: true
+      supports_values_constructor: true
+      values_row_alias: "__mv_keyset"
+      derived_table_requires_alias: true
+      cohort_strategy_preference:
+        - values_join
+        - key_range
+        - predicate_or
+
+    # ------------------------------------------------------
+    # PostgreSQL / Redshift / Greenplum
+    # ------------------------------------------------------
+    postgres:
+      row_limit_style: limit
+      row_limit_keyword: "LIMIT"
+      count_all_function: "COUNT"
+      count_column_function: "COUNT"
+      identifier_quote_open: '"'
+      identifier_quote_close: '"'
+      identifier_quote_escape: '""'
+      random_order_expression: "RANDOM()"
+      text_cast_type: "TEXT"
+      null_sort_order: nulls_last
+      supports_row_number: true
+      supports_values_constructor: true
+      values_row_alias: "__mv_keyset"
+      derived_table_requires_alias: true
+      cohort_strategy_preference:
+        - values_join
+        - key_range
+        - predicate_or
+
+    # ------------------------------------------------------
+    # Spark SQL / Databricks / Fabric Lakehouse
+    # ------------------------------------------------------
+    spark_sql:
+      row_limit_style: limit
+      row_limit_keyword: "LIMIT"
+      count_all_function: "COUNT"
+      count_column_function: "COUNT"
+      identifier_quote_open: "`"
+      identifier_quote_close: "`"
+      identifier_quote_escape: "``"
+      random_order_expression: "RAND()"
+      # Spark's hash() accepts the column list and is deterministic.
+      row_signature_expression: "ABS(HASH({columns}))"
+      text_cast_type: "STRING"
+      null_sort_order: nulls_first
+      supports_row_number: true
+      supports_values_constructor: true
+      values_row_alias: "__mv_keyset"
+      derived_table_requires_alias: true
+      cohort_strategy_preference:
+        - values_join
+        - key_range
+        - predicate_or
+
+    # ------------------------------------------------------
+    # SQLite: the local relational engine the File capability
+    # stages discovered file content into, so the existing
+    # validation engine reads a file dataset with the same SQL
+    # it issues against any other configured platform.
+    # ------------------------------------------------------
+    sqlite:
+      row_limit_style: limit
+      row_limit_keyword: "LIMIT"
+      count_all_function: "COUNT"
+      count_column_function: "COUNT"
+      identifier_quote_open: '"'
+      identifier_quote_close: '"'
+      identifier_quote_escape: '""'
+      random_order_expression: "RANDOM()"
+      # No multi-column signature expression is portable here; a keyless
+      # sample stays deterministic by ordering on the compared columns.
+      row_signature_expression: null
+      text_cast_type: "TEXT"
+      null_sort_order: nulls_first
+      supports_row_number: true
+      # SQLite has a VALUES constructor but no derived-column-list alias
+      # (`AS t(a, b)`), which the values-join cohort requires.
+      supports_values_constructor: false
+      values_row_alias: "__mv_keyset"
+      derived_table_requires_alias: true
+      cohort_strategy_preference:
+        - key_range
+        - predicate_or
+
+    # ------------------------------------------------------
+    # Oracle 12c+
+    # ------------------------------------------------------
+    oracle:
+      row_limit_style: fetch_first
+      row_limit_keyword: "FETCH FIRST"
+      count_all_function: "COUNT"
+      count_column_function: "COUNT"
+      identifier_quote_open: '"'
+      identifier_quote_close: '"'
+      identifier_quote_escape: '""'
+      random_order_expression: "DBMS_RANDOM.VALUE"
+      text_cast_type: "VARCHAR2(4000)"
+      null_sort_order: nulls_last
+      supports_row_number: true
+      supports_values_constructor: false
+      values_row_alias: "__mv_keyset"
+      derived_table_requires_alias: true
+      cohort_strategy_preference:
+        - key_range
+        - predicate_or

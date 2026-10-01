@@ -1,0 +1,52 @@
+table:
+  table_id: FILE_LAKEHOUSE_TO_SQL_001
+  logical_table_name: dpwremit
+  layer: file_to_bronze
+
+  tags:
+    - file
+    - lakehouse
+    - fabric_sql
+
+  comparison_mode: files_to_table
+
+  source:
+    # The connection already resolves to /lakehouse/default/Files/bronze.
+    connection: fabric_lakehouse_source
+
+    paths:
+      historical_backfill: .
+      smoke_test: .
+      full_load: .
+
+    file:
+      pattern: "DPWREMIT3F2026-09-02_5601.dat"
+      format: dat
+      options:
+        header: true
+        encoding: utf-8
+      format_options:
+        dat: {}
+
+    consolidation:
+      enabled: true
+      mode: logical
+      validate_schema_compatibility: true
+      streaming: true
+      chunking: true
+      compatibility: strict
+
+  target:
+    type: fabric_sql_table
+    # Resolves config/connections/targets.yml -> fabric_target.
+    connection: fabric_target
+    database: lh_brz_tst
+    schema: 820_dpwremit
+    table: dpwremit3f2026_09_02_5601
+
+  key_mappings: []
+  compare_column_mappings: []
+
+  incremental:
+    enabled: false
+    strategy: full_hash

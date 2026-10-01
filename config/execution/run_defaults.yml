@@ -1,0 +1,11 @@
+# ======================================================================
+# RUN DEFAULTS
+# Checks forced on or off for every run, overriding the profile's own
+# enabled/disabled decision.
+# ======================================================================
+
+run_defaults:
+  always_run:
+  - row_count
+  always_skip: []
+  report_overrides: true

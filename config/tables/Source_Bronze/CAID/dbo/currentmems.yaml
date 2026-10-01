@@ -1,0 +1,31 @@
+tables:
+- id: TABLE_VALIDATION_064
+  source_system: sql_server_source
+  layer: source_to_bronze
+  source_server: HPDEVIAPP
+  source_database: CAID
+  source_schema: dbo
+  source_table: currentmems
+  target_system: fabric_target
+  target_server: a2m2qviqy5vuhpcejrmqznt4ji-ccq32qai6wxunpb4thmg6g3rny.datawarehouse.fabric.microsoft.com
+  target_database: lh_brz
+  target_schema: dbo
+  target_table: currentmems
+  key_mappings: []
+  compare_column_mappings:
+  - source_column: detrec
+    target_column: detrec
+  - source_column: grpeff
+    target_column: grpeff
+  - source_column: grpexp
+    target_column: grpexp
+  - source_column: membno
+    target_column: membno
+  - source_column: pcpcod
+    target_column: pcpcod
+  - source_column: pcpeff
+    target_column: pcpeff
+  - source_column: pcpexp
+    target_column: pcpexp
+  - source_column: plan_id
+    target_column: plan_id

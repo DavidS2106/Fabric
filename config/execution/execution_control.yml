@@ -1,0 +1,22 @@
+# ======================================================================
+# EXECUTION CONTROL
+# Which tables and phases a run selects, and how the selected phases
+# combine with each table's own migration_phase.
+# ======================================================================
+
+execution_control:
+  full_run: true
+  environment: qa
+  table_ids: [] 
+  table_names: []
+  layers: []
+  servers: []
+  databases: []
+  schemas: []
+  phases:
+  - smoke_test
+  - historical_backfill
+  - incremental
+  - full_load
+  phase_execution:
+    mode: per_table_configured

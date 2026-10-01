@@ -1,0 +1,153 @@
+# ======================================================================
+# VALIDATION PROFILES / PHASES
+# ======================================================================
+# Profile execution order is enforced by core/orchestrator.py. The order
+# these profiles are declared in is the order the framework reports them
+# in, so it is preserved here exactly as it was.
+# ======================================================================
+
+validation_profiles:
+
+  # --------------------------------------------------------------------
+  # PROFILE: preflight
+  # Preflight schema checks only (connection, database, schema, table, columns)
+  # Data checks (row_count, key_validation, etc.) are always disabled
+  # --------------------------------------------------------------------
+  preflight:
+
+    # SCHEMA VALIDATION
+    schema_validation:
+      connection_validation: true
+      database_availability: true
+      schema_availability: true
+      table_availability: true
+      column_availability: true
+      key_column_availability: true
+      object_validation: true
+
+  # --------------------------------------------------------------------
+  # PROFILE: smoke_test
+  # --------------------------------------------------------------------
+  smoke_test:
+
+    # VALIDATION SCOPE
+    validation_scope:
+      mode: full
+
+    # DATA VALIDATION
+    data_validation:
+      row_count: true
+      key_validation: true
+      null_validation: true
+      duplicate_check: true
+
+    # DATA VALUE VALIDATION
+    data_value_validation:
+      enabled: false
+
+    # EDGE CASE VALIDATION
+    edge_case_validation:
+      enabled: true
+  
+  # --------------------------------------------------------------------
+  # PROFILE: historical_backfill
+  # --------------------------------------------------------------------
+  historical_backfill:
+
+    # VALIDATION SCOPE
+    validation_scope:
+      mode: full
+
+    # DATA VALIDATION
+    data_validation:
+      row_count: true
+      key_validation: true
+      null_validation: true
+      duplicate_check: true
+
+    # DATA VALUE VALIDATION
+    data_value_validation:
+      enabled: false
+
+    # EDGE CASE VALIDATION
+    edge_case_validation:
+      enabled: true
+
+    # AUDIT VALIDATION
+    audit_validation:
+      enabled: false
+
+    # RECORD-LEVEL COMPARISON
+    record_level_comparison:
+      enabled: true
+      mode: full_data_comparison
+
+  # --------------------------------------------------------------------
+  # PROFILE: incremental
+  # --------------------------------------------------------------------
+  # Which validations run. HOW the incremental window is resolved is
+  # `validations.incremental_strategy` in incremental_strategy.yml.
+  # --------------------------------------------------------------------
+  incremental:
+
+    # VALIDATION SCOPE
+    validation_scope:
+      mode: incremental
+      on_unresolved: error
+
+    # DATA VALIDATION
+    data_validation:
+      row_count: true
+      key_validation: false
+      null_validation: false
+      duplicate_check: true
+
+    # DATA VALUE VALIDATION
+    data_value_validation:
+      enabled: false
+
+    # EDGE CASE VALIDATION
+    edge_case_validation:
+      enabled: true
+
+    # AUDIT VALIDATION
+    audit_validation:
+      enabled: false
+
+    # RECORD-LEVEL COMPARISON
+    record_level_comparison:
+      enabled: true
+      mode: full_data_comparison
+
+  # --------------------------------------------------------------------
+  # PROFILE: full_load
+  # --------------------------------------------------------------------
+  full_load:
+
+    # VALIDATION SCOPE
+    validation_scope:
+      mode: full
+
+    # DATA VALIDATION
+    data_validation:
+      row_count: true
+      key_validation: true
+      null_validation: true
+      duplicate_check: true
+
+    # DATA VALUE VALIDATION
+    data_value_validation:
+      enabled: true
+
+    # EDGE CASE VALIDATION
+    edge_case_validation:
+      enabled: true
+
+    # AUDIT VALIDATION
+    audit_validation:
+      enabled: true
+
+    # RECORD-LEVEL COMPARISON
+    record_level_comparison:
+      enabled: true
+      mode: full_data_comparison

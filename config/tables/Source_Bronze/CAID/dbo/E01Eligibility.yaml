@@ -1,0 +1,45 @@
+tables:
+- id: TABLE_VALIDATION_065
+  source_system: sql_server_source
+  layer: source_to_bronze
+  source_server: HPDEVIAPP
+  source_database: CAID
+  source_schema: dbo
+  source_table: E01Eligibility
+  target_system: fabric_target
+  target_server: a2m2qviqy5vuhpcejrmqznt4ji-ccq32qai6wxunpb4thmg6g3rny.datawarehouse.fabric.microsoft.com
+  target_database: lh_brz
+  target_schema: dbo
+  target_table: e01eligibility
+  key_mappings: []
+  compare_column_mappings:
+  - source_column: BeneficiaryBirthDate
+    target_column: BeneficiaryBirthDate
+  - source_column: BeneficiaryFirst
+    target_column: BeneficiaryFirst
+  - source_column: BeneficiaryGroupPolicyNumber
+    target_column: BeneficiaryGroupPolicyNumber
+  - source_column: BeneficiaryHICNumber
+    target_column: BeneficiaryHICNumber
+  - source_column: BeneficiaryMiddleInitial
+    target_column: BeneficiaryMiddleInitial
+  - source_column: BeneficiarySexCode
+    target_column: BeneficiarySexCode
+  - source_column: BeneficiarySupplementalEligibilityFromDate
+    target_column: BeneficiarySupplementalEligibilityFromDate
+  - source_column: BeneficiarySupplementalEligibilityToDate
+    target_column: BeneficiarySupplementalEligibilityToDate
+  - source_column: BeneficiarySupplementalIDNumber
+    target_column: BeneficiarySupplementalIDNumber
+  - source_column: BeneficiarySurname
+    target_column: BeneficiarySurname
+  - source_column: COBAID
+    target_column: COBAID
+  - source_column: FileEffectiveDate
+    target_column: FileEffectiveDate
+  - source_column: FileUpdateIndicator
+    target_column: FileUpdateIndicator
+  - source_column: Filler
+    target_column: Filler
+  - source_column: RecordType
+    target_column: RecordType

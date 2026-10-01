@@ -1,0 +1,242 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Record Comparison Configuration (Refactored)
+# ──────────────────────────────────────────────────────────────────────────────
+# Framework-aligned configuration for record comparison validation
+
+record_level_comparison:
+  enabled: true
+
+comparison_settings:
+  default_mode: full_data_comparison
+  supported_modes:
+  - full_data_comparison
+  - sample_comparison
+  large_table_sampling:
+    enabled: true
+    row_count_threshold: 1000000
+    sample_size: 100000
+  large_table_processing:
+    enabled: true
+    medium_table_threshold: 500000
+    large_table_threshold: 2000000
+  sampling:
+    enabled: true
+    default_sample_size: 100000
+  supported_sampling_strategies:
+  - deterministic
+  - random
+  default_sampling_strategy:
+    type: deterministic
+    key_source:
+      type: table_yaml
+  key_mapping_source:
+    type: table_yaml
+  missing_key_behavior:
+    full_data_comparison: hash_full_comparison
+    deterministic_sampling: random_sampling
+    fallback_status: PASS
+    skip_status: SKIP
+    error_status: CONFIG_ERROR
+  null_handling:
+    blank_is_null: false
+    both_null: match
+    one_null: mismatch
+  timestamp_handling:
+    parse_iso_strings: true
+    preserve_precision: true
+    precision_loss_behavior: mismatch
+    fractional_second_tolerance: '0'
+    out_of_range_strategy: native_or_string
+    timezone_comparison: preserve
+  hash_comparison:
+    algorithm: sha256
+    comparison_scope: configured_columns
+    column_exclusions: []
+    duplicate_handling: multiset
+    parallel_ingest: true
+    ingest_workers: 2
+    progress_interval_percent: 25
+    batch_size: 10000
+    spill:
+      strategy: sqlite
+      directory: output/temp/hash_comparison
+      store_row_payloads: bounded
+      commit_interval_batches: 20
+    normalization:
+      null_representation: <NULL>
+      blank_handling: preserve
+      trim_strings: false
+      case_sensitive: true
+      normalize_datatypes: true
+      unicode_normalization: none
+      numeric_normalization: canonical_decimal
+      date_normalization: iso8601
+      timestamp_normalization: precision_aware
+      timezone_normalization: preserve
+      precision_normalization: preserve
+  full_data_comparison:
+    enabled: true
+    mode_name: full_data_comparison
+    validation_scope_source: table_yaml
+    consistency_requirement: stable_validation_window
+    key_based:
+      enabled: true
+      strategy_name: KEY_BASED_FULL_COMPARISON
+      validate_nulls: true
+      validate_duplicates: true
+      require_unique_keys: true
+    hash_fallback:
+      enabled: true
+      strategy: hash_full_comparison
+      strategy_name: HASH_BASED_FULL_COMPARISON
+      warning_status: PASS
+      warning_code: KEY_MAPPING_MISSING_HASH_FALLBACK
+      warning_message: Key mapping unavailable or non-unique; hash-based full comparison used.
+      trigger_conditions:
+      - missing
+      - empty
+      - invalid
+      - nulls
+      - duplicates
+      - non_unique
+    batching:
+      streaming_enabled: true
+      database_pushdown_enabled: true
+      memory_safe_processing: true
+      retry_failed_batch: false
+      batch_size: 10000
+      max_retries: 0
+      key_cohort_strategy: auto
+      cohort_chunk_size: 10000
+      parallel_execution:
+        enabled: true
+        worker_count: 2
+    reverse_pass:
+      mode: when_counts_reconcile
+      require_shared_statistics: true
+    performance:
+      prefer_dual_keyset_merge: true
+      bounded_memory: true
+      reuse_statistics: true
+      reuse_comparison_counts: true
+      vectorized_comparison: true
+      source_target_read_parallelism:
+        enabled: false
+        bounded_concurrency: 2
+      hash_first_comparison:
+        enabled: true
+    evidence:
+      export_matched_records: true
+      matched_records_limit: 100
+      mismatch_sample_limit: 100
+      export_all_excess_source: false
+      export_all_excess_target: false
+      excess_source_limit: 100
+      excess_target_limit: 100
+      row_hash_column: _RowHashValue
+    count_names:
+      matched: matched_records
+      mismatched: mismatch_records
+      excess_in_source: excess_in_source
+      excess_in_target: excess_in_target
+    excel_reports:
+      enabled: true
+      per_table:
+        sheets:
+        - summary
+        - validation_checks
+        - matched_records
+        - mismatched_records
+        - excess_in_source
+        - excess_in_target
+      sheet_names:
+        summary: SUMMARY
+        table_summary: TABLE_SUMMARY
+        validation_checks: VALIDATION_CHECKS
+        matched_records: MATCHED_RECORDS
+        mismatched_records: MISMATCHED_RECORDS
+        excess_in_source: EXCESS_IN_SOURCE
+        excess_in_target: EXCESS_IN_TARGET
+        reconciliation: RECONCILIATION
+      overall_statuses:
+      - PASS
+      - FAIL
+      - WARNING
+      - ERROR
+      - SKIP
+      summary_severity_order:
+      - ERROR
+      - FAIL
+      - WARNING
+      - PASS
+      - SKIP
+      status_display:
+        PASS: PASS
+        FAIL: FAIL
+        WARN: WARNING
+        WARNING: WARNING
+        ERROR: ERROR
+        FRAMEWORK_ERROR: ERROR
+        CONFIG_ERROR: ERROR
+        SKIP: SKIP
+      formatting:
+        header_color: 1D4ED8
+        header_font_color: FFFFFF
+        freeze_panes: A2
+        max_column_width: 60
+        status_colors:
+          PASS: 22C55E
+          FAIL: EF4444
+          WARNING: F59E0B
+          ERROR: DC2626
+          SKIP: 64748B
+          DEFAULT: FFFFFF
+  error_policy:
+    framework_exception_status: FRAMEWORK_ERROR
+    configuration_error_status: CONFIG_ERROR
+    continue_after_check_error: true
+    fatal_exception_categories: []
+  status_policy:
+    severity_order:
+    - CONFIG_ERROR
+    - FRAMEWORK_ERROR
+    - FAIL
+    - WARNING
+    - PASS
+    - SKIP
+    table_impact:
+      ERROR: FRAMEWORK_ERROR
+      FRAMEWORK_ERROR: FRAMEWORK_ERROR
+      CONFIG_ERROR: CONFIG_ERROR
+      FAIL: FAIL
+      WARN: WARNING
+      WARNING: WARNING
+      PASS: PASS
+      SKIP: SKIP
+
+validation_policies:
+  hashing:
+    algorithm: sha256
+    comparison_scope: business_columns
+    duplicate_handling: sum_duplicates
+    column_exclusions: []
+    normalization:
+      blank_handling: null
+      null_representation: "NULL"
+      trim_strings: false
+      case_sensitive: false
+      unicode_normalization: NFC
+      numeric_normalization: canonical_decimal
+      precision_normalization: trim_trailing_zeros
+      timezone_normalization: preserve
+      parse_iso_strings: true
+  nulls:
+    blank_is_null: false
+    both_null: match
+    one_null: mismatch
+  timestamps:
+    parse_iso_strings: true
+    preserve_precision: true
+    timezone_comparison: compare_as_utc
+    precision_loss_behavior: accept_source
+    fractional_second_tolerance: 0

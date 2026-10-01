@@ -1,0 +1,12 @@
+﻿__pycache__/
+*.pyc
+.pytest_tmp/
+.pytest_run_*/
+test_artifacts/
+output/
+temp_reports/
+Raw/
+
+# File capability: generated output, staged datasets and extracted archives.
+File/output/
+File/config/connection/.env
